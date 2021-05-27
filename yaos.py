@@ -75,19 +75,19 @@ def padzeros(a, b):
 def add(a, b, p_bits, input_p_bits):
     c = 0
     s = []
-    print(a)
-    print(b)
+    # print(a)
+    # print(b)
     for j in range(len(a) - 1, -1, -1):
         s.append(c ^ a[j] ^ b[j])
         c = c ^ ((a[j] ^ c) and (b[j] ^ c))
     if c == 1:
         s.append(c)
     s.reverse()
-    printtable("xor", 1, p_bits[0], input_p_bits[0], [0, 1])  # a ^ c
-    printtable("xor", 2, p_bits[1], input_p_bits[1], [0, 1])  # b ^ c
-    printtable("and", 3, p_bits[2], p_bits[0], p_bits[1])  # (a ^ c) and (b ^ c)
-    printtable("xor", 4, p_bits[3], [0, 1], p_bits[2])  # c ^ ((a ^ c) and (b ^ c))
-    printtable("xor", 5, [0, 1], input_p_bits[0], p_bits[1])  # a ^ (b ^ c) is an output gate
+    # printtable("xor", 1, p_bits[0], input_p_bits[0], [0, 1])  # a ^ c
+    # printtable("xor", 2, p_bits[1], input_p_bits[1], [0, 1])  # b ^ c
+    # printtable("and", 3, p_bits[2], p_bits[0], p_bits[1])  # (a ^ c) and (b ^ c)
+    # printtable("xor", 4, p_bits[3], [0, 1], p_bits[2])  # c ^ ((a ^ c) and (b ^ c))
+    # printtable("xor", 5, [0, 1], input_p_bits[0], p_bits[1])  # a ^ (b ^ c) is an output gate
     return s
 
 

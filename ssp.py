@@ -6,12 +6,11 @@ import phe.util as pheu
 def dot(K, L):
     return sum(i[0] * i[1] for i in zip(K, L))
 
-def ssp(pubkey, prikey, n, X, Y):
+def ssp(pubkey, prikey, n, X, Y, mult):
+    dot_product = dot(X,Y)
 
-    X = [int(x) for x in X]
+    X = [int(x)*mult for x in X]
     Y = [int(y) for y in Y]
-
-    xy = np.dot(X, Y)
 
     # Alice creates C.
     c = []
@@ -29,7 +28,16 @@ def ssp(pubkey, prikey, n, X, Y):
     w = (t * w)
     sa = prikey.raw_decrypt(w)
 
-    # truth = (dot(X, Y) - sb) % n
-    # print("n: {4} | sa: {0} | sb: {1} | dot product: {2} | true sa: {3}".format(sa, sb, dot(X, Y), truth, n))
+    #truth = (mult*dot_product - sb) % n
+    #print(" sa: {0} | sb: {1} | 2x dot product: {2} | true sa: {3} | n: {4} ".format(sa, sb, mult*dot_product, truth, n))
 
     return sa, sb
+
+if __name__ == '__main__':
+    X = [1,2,3]
+    Y = [3,4,5]
+
+    Z = [(-2)*x for x in X]
+
+    print((-2)*dot(X,Y))
+    print(dot(Z, Y))

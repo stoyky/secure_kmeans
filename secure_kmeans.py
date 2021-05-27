@@ -6,12 +6,10 @@ from phe import paillier
 from random_share import gen_shares, reconstruct, extract_shares
 from ssp import ssp
 from yaos import generate_p_bits_cc, closestcluster
-from calculate_alice_terms import calculate_alice_term1, calculate_term2
-from calculate_bob_terms import calculate_bob_term1, calculate_term3
+from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
 
 MAX_DATA = 50  # max value that an element in the data can go up to.
 NUM_FEATURES = 2  # number of attributes in the data set.
-
 
 p = 347
 q = 349
@@ -19,6 +17,7 @@ n = p * q
 
 pubkey = paillier.PaillierPublicKey(n)
 prikey = paillier.PaillierPrivateKey(pubkey, p, q)
+
 
 def create_random_data(data):
     alice_data = []
@@ -64,14 +63,24 @@ def random_centroids(k):
     return centroids
 
 
-def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=10):
-    centroids = random_centroids(k)
+def dist_euclid(x1, y1, x2, y2):
+    return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
+
+def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=1):
+    centroids = random_centroids(k)
 
     for i in range(max_iter):
         # calculating the distance between point and centroid.
+        point_center = []
+
         for idx in range(data.shape[0]):  # iterates 100 times.
             alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
+            temp_dist = []
+
+            for centroid in centroids:
+                temp_dist.append(dist_euclid(data[idx][0], data[idx][1], centroid[0], centroid[1]))
+            point_center.append([np.argmin(temp_dist), [data[idx][0], data[idx][1]]])
 
             alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
             bob_shares = []
@@ -85,9 +94,24 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=10):
                 alice_term2 = calculate_term2([alice_x, alice_y])  # calculate the summation of her centroid shares.
                 bob_term3 = calculate_term3([bob_x, bob_y])  # calculate the summation
 
-                sa, sb = ssp(pubkey, prikey, n, [alice_term1, alice_term2], [bob_term1, bob_term3])
-                alice_shares.append(sa)
-                bob_shares.append(sb)
+                # sa, sb = ssp(pubkey, prikey, n, [alice_term1, alice_term2], [bob_term1, bob_term3])
+                # alice_shares.append(sa)
+                # bob_shares.append(sb)
+
+                alice_term4, bob_term4 = ssp(pubkey, prikey, n, [alice_x, alice_y], [bob_x, bob_y], mult=2)
+                alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=-2)
+                alice_term6, bob_term6 = ssp(pubkey, prikey, n, [bob_x, bob_y], data[idx].tolist(), mult=-2)
+
+                alice_complete_term = alice_term1 + alice_term2 + alice_term4 + alice_term5 + alice_term6
+                bob_complete_term = bob_term1 + bob_term3 + bob_term4 + bob_term5 + bob_term6
+
+                alice_shares.append(alice_complete_term)
+                bob_shares.append(bob_complete_term)
+
+            p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
+            closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
+                                     input_p_bits_cc)  # Returns the index of the smallest sum, i.e. closest cluster
+            print("Closest centroid: {0} | Yao's closest centroid: {1}".format(point_center, closest))
 
 
 if __name__ == '__main__':

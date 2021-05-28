@@ -35,3 +35,16 @@ def gen_shares(s, n):
 
 def extract_shares(share):  # input is a list [[1 (idx), element_value], [2 (idx), element_value]]. returns element value.
     return share[0][1], share[1][1]
+
+
+
+def generate_share(x, n): # x = value to split, n = finite field
+    random_value = np.random.randint(1000)  # random number.. maybe bigger?
+    share1 = (x - random_value) % n
+
+    return share1, random_value
+
+def reconstruct_share(x, y, n):
+    return (x + y) % n
+
+

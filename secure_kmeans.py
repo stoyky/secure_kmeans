@@ -3,7 +3,7 @@ import random
 import matplotlib.pyplot as plt
 from phe import paillier
 
-from random_share import gen_shares, reconstruct, extract_shares
+from random_share import generate_share, reconstruct_share
 from ssp import ssp
 from yaos import generate_p_bits_cc, closestcluster
 from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
@@ -64,7 +64,7 @@ def random_centroids(k):
 
 
 def dist_euclid(x1, y1, x2, y2):
-    return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+    return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
 
 def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=1):
@@ -85,25 +85,31 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=1):
             alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
             bob_shares = []
             for x, y in centroids:
-                alice_x, bob_x = extract_shares(gen_shares(x, NUM_FEATURES))
-                alice_y, bob_y = extract_shares(gen_shares(y, NUM_FEATURES))
+                alice_x, bob_x = generate_share(x, n)
+                alice_y, bob_y = generate_share(y, n)
 
-                alice_term1 = calculate_alice_term1(data[idx], alice_owns_feature1, alice_owns_feature2)
-                bob_term1 = calculate_bob_term1(data[idx], alice_owns_feature1, alice_owns_feature2)
+                # reconstruct_share(alice_x, bob_x, n)
+                # reconstruct_share(alice_y, bob_y, n)
 
-                alice_term2 = calculate_term2([alice_x, alice_y])  # calculate the summation of her centroid shares.
-                bob_term3 = calculate_term3([bob_x, bob_y])  # calculate the summation
+                alice_term1 = calculate_alice_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
+                bob_term1 = calculate_bob_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
 
-                # sa, sb = ssp(pubkey, prikey, n, [alice_term1, alice_term2], [bob_term1, bob_term3])
-                # alice_shares.append(sa)
-                # bob_shares.append(sb)
+                alice_term2 = calculate_term2([alice_x, alice_y], n)  # calculate the summation of her centroid shares.
+                bob_term3 = calculate_term3([bob_x, bob_y], n)  # calculate the summation
 
                 alice_term4, bob_term4 = ssp(pubkey, prikey, n, [alice_x, alice_y], [bob_x, bob_y], mult=2)
-                alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=-2)
-                alice_term6, bob_term6 = ssp(pubkey, prikey, n, [bob_x, bob_y], data[idx].tolist(), mult=-2)
+                alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=2)
+                alice_term6, bob_term6 = ssp(pubkey, prikey, n, data[idx].tolist(), [bob_x, bob_y], mult=2)
+                # print((alice_term5 + bob_term5) % n)
+                # print((alice_term4 + bob_term4) % n)
+                # print((alice_term6 + bob_term6) % n)
 
-                alice_complete_term = alice_term1 + alice_term2 + alice_term4 + alice_term5 + alice_term6
-                bob_complete_term = bob_term1 + bob_term3 + bob_term4 + bob_term5 + bob_term6
+                alice_complete_term = (alice_term1 + alice_term2 + alice_term4 - alice_term5 - alice_term6) % n
+                bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
+
+                # for checking later. TODO delete
+                # g = np.sqrt((alice_complete_term + bob_complete_term) % n)
+                # h=  dist_euclid(data[idx][0], data[idx][1], x, y)
 
                 alice_shares.append(alice_complete_term)
                 bob_shares.append(bob_complete_term)

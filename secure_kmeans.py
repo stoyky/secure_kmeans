@@ -69,10 +69,12 @@ def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
 
-def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=2, max_iter=20):
+def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
     centroids = random_centroids(k)
     converged = False
     current_iter = 0
+    naive_centroids = deepcopy(centroids)
+
     while not converged:
         print("Current iteration: {0}".format(current_iter))
         if current_iter < max_iter:
@@ -82,6 +84,63 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=2, max_iter=20):
             alice_old_centroids = []
             bob_old_centroids = []
 
+
+            # NAIVE K-MEANS
+            # 1. calculate the closest centroid
+            point_center = []
+            for point in data:
+                temp_dist = []
+                for naive_centroid in naive_centroids:
+                    temp_dist.append(dist_euclid(point[0], point[1], naive_centroid[0], naive_centroid[1]))
+                point_center.append(np.argmin(temp_dist))
+
+
+            # 2. calculate the new centroid
+            # need to check if centroids differ by no more than epsilon and then just terminate
+            centroids_avg = []
+            for i in range(k):
+                summ = 0
+                summ1 = 0
+                gh = np.where(np.asarray(point_center) == i)[0]
+
+                for g in gh:
+                    summ += data[g][0]
+                    summ1 += data[g][1]
+                summ = summ / len(gh)
+                summ1 = summ1 / len(gh)
+
+                centroids_avg.append((summ, summ1))
+            naive_epsilon = 0.1
+
+            # 3. check for termination
+            naive_converg = 1
+            for i in range(k):
+                u = dist_euclid(naive_centroids[i][0], naive_centroids[i][1], centroids_avg[i][0], centroids_avg[i][1])
+                if u <= naive_epsilon:
+                    naive_converg *= 1
+                else:
+                    naive_converg *= 0
+
+            colours = ["red", "blue", "green"]
+            fig = plt.Figure()
+            for i in range(k):
+                plt.scatter(centroids_avg[i][0], centroids_avg[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
+                data_point_indicies = np.where(np.asarray(point_center) == i)[0]
+
+                for index in data_point_indicies:
+                    plt.scatter(data[index][0], data[index][1], color=colours[i])
+
+            save_name = r"images/naive_kmeans_{0}.png".format(current_iter)
+            plt.savefig(save_name)
+            plt.clf()
+
+            if naive_converg == 1:
+                print("normal kmeans would have terminated.")
+            else:
+                naive_centroids = centroids_avg
+
+
+            # SECURE K-MEANS ALGORITHM
             # 1. calculate the closest centroid.
             for idx in range(data.shape[0]):  # iterates 100 times.
                 alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
@@ -212,9 +271,9 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=2, max_iter=20):
                 a_share_term4, b_share_term4 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_old_centroid),
                                                    mult=2)  # calculate 2*uab
                 alice_centroid_term = (a_old_squared + a_share_term1 + a_new_squared +\
-                                      a_share_term2 + a_old_new + a_share_term3 + a_share_term4) % n
+                                      a_share_term2 - a_old_new - a_share_term3 - a_share_term4) % n
                 bob_centroid_term = (b_old_squared + b_share_term1 + b_new_squared +\
-                                      b_share_term2 + b_old_new + b_share_term3 + b_share_term4) % n
+                                      b_share_term2 - b_old_new - b_share_term3 - b_share_term4) % n
 
                 alices_centroid_shares.append(alice_centroid_term)
                 bobs_centroid_shares.append(bob_centroid_term)
@@ -223,15 +282,34 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=2, max_iter=20):
             input_p_bits_tm = np.random.randint(0, MAX_DATA, (4, 2))  # 4 for findbiggest
             below_epsilon = 1
             for a_share, b_share in zip(alices_centroid_shares, bobs_centroid_shares):
-                ab = (a_share + b_share) * 10  # epsilon has to be a integer. 0.2 * 10 = 2.
+                ab = (a_share + b_share) % n  # epsilon has to be a integer. 0.2 * 10 = 2.
+                print(ab)
                 # returns 0 if any is above epsilon, thus 1*0 = 0. if all is below epsilon, remains 1.
                 below_epsilon *= terminate(ab, epsilon, p_bits_tm, input_p_bits_tm)
 
             converged = bool(below_epsilon)
+
+            # 4. plot some nice graphs.
+            colours = ["red", "blue", "green"]
+            fig = plt.Figure()
+            for i in range(k):
+                plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
+                data_point_indicies = np.where(np.asarray(closest_cluster) == i)[0]
+
+                for index in data_point_indicies:
+                    plt.scatter(data[index][0], data[index][1], color=colours[i])
+
+            save_name = r"images/secure_kmeans_{0}.png".format(current_iter)
+            plt.savefig(save_name)
+            plt.clf()
+
+
+
+
+
         else:
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.
-
 
 
 if __name__ == '__main__':

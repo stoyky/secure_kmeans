@@ -174,7 +174,12 @@ def recomputemean(a, b, m, n, p_bits, input_p_bits):  # Returns (a+b)/(m+n)
     mn = add(m, n, p_bits[:4], input_p_bits[2:4])  # Second circuit
     ab, mn = padzeros(ab, mn)
     answer = division(ab, mn, p_bits[4:], input_p_bits[4:])  # Remaining circuits
-    return answer
+
+    answer_string = ""
+    for a in answer:
+        answer_string += str(a)
+
+    return int(answer_string, 2)
 
 
 def checkprime(n):
@@ -199,6 +204,14 @@ def generate_p_bits_rm():
     input_p_bits_rm = np.random.randint(0, 100, (8, 2))  # 4 sets for addition, 4 sets for findbiggest
     return p_bits_rm, input_p_bits_rm
 
+
+def terminate(ab, epsilon, p_bits, input_p_bits):  # Returns 1 if a+b < epsilon
+    ab = [int(x) for x in bin(ab)[2:]]
+    epsilon = [int(x) for x in bin(epsilon)[2:]]
+    ab, epsilon = padzeros(ab, epsilon)
+    if findbiggest(ab, epsilon, p_bits, input_p_bits) == epsilon:  # Epsilon is the biggest
+        return 1
+    return 0
 
 if __name__ == '__main__':
     alice = [3, 1, 2, 2, 4]

@@ -6,7 +6,7 @@ import phe.util as pheu
 def dot(K, L):
     return sum(i[0] * i[1] for i in zip(K, L))
 
-def ssp(pubkey, prikey, n, X, Y, mult):
+def ssp(pubkey, prikey, n, X, Y, mult=1):
     dot_product = dot(X,Y)
 
     X = [int(x)*mult for x in X]

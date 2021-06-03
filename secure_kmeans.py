@@ -1,11 +1,13 @@
 import numpy as np
 import random
+from copy import deepcopy
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from phe import paillier
 
 from random_share import generate_share, reconstruct_share
 from ssp import ssp
-from yaos import generate_p_bits_cc, closestcluster
+from yaos import generate_p_bits_cc, closestcluster, recomputemean, generate_p_bits_rm, terminate
 from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
 
 MAX_DATA = 50  # max value that an element in the data can go up to.
@@ -67,57 +69,169 @@ def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
 
-def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=0.1, max_iter=1):
+def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=2, max_iter=20):
     centroids = random_centroids(k)
+    converged = False
+    current_iter = 0
+    while not converged:
+        print("Current iteration: {0}".format(current_iter))
+        if current_iter < max_iter:
+            current_iter += 1
+            # calculating the distance between point and centroid.
+            closest_cluster = []  # keeps track of the closest centroid for each data point (index mapping)
+            alice_old_centroids = []
+            bob_old_centroids = []
 
-    for i in range(max_iter):
-        # calculating the distance between point and centroid.
-        point_center = []
+            # 1. calculate the closest centroid.
+            for idx in range(data.shape[0]):  # iterates 100 times.
+                alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
+                alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
+                bob_shares = []
 
-        for idx in range(data.shape[0]):  # iterates 100 times.
-            alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
-            temp_dist = []
+                for x, y in centroids:
+                    alice_x, bob_x = generate_share(x, n)
+                    alice_y, bob_y = generate_share(y, n)
 
-            for centroid in centroids:
-                temp_dist.append(dist_euclid(data[idx][0], data[idx][1], centroid[0], centroid[1]))
-            point_center.append([np.argmin(temp_dist), [data[idx][0], data[idx][1]]])
+                    old_centroids = deepcopy(centroids)
+                    alice_old_centroids.append((alice_x, alice_y))
+                    bob_old_centroids.append((bob_x, bob_y))
+                    # reconstruct_share(alice_x, bob_x, n)
+                    # reconstruct_share(alice_y, bob_y, n)
 
-            alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
-            bob_shares = []
-            for x, y in centroids:
+                    alice_term1 = calculate_alice_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
+                    bob_term1 = calculate_bob_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
+
+                    alice_term2 = calculate_term2([alice_x, alice_y], n)  # calculate the summation of her centroid shares.
+                    bob_term3 = calculate_term3([bob_x, bob_y], n)  # calculate the summation
+
+                    alice_term4, bob_term4 = ssp(pubkey, prikey, n, [alice_x, alice_y], [bob_x, bob_y], mult=2)
+                    alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=2)
+                    alice_term6, bob_term6 = ssp(pubkey, prikey, n, data[idx].tolist(), [bob_x, bob_y], mult=2)
+                    # print((alice_term5 + bob_term5) % n)
+                    # print((alice_term4 + bob_term4) % n)
+                    # print((alice_term6 + bob_term6) % n)
+
+                    alice_complete_term = (alice_term1 + alice_term2 + alice_term4 - alice_term5 - alice_term6) % n
+                    bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
+
+                    # for checking later. TODO delete
+                    # g = np.sqrt((alice_complete_term + bob_complete_term) % n)
+                    # h=  dist_euclid(data[idx][0], data[idx][1], x, y)
+
+                    alice_shares.append(alice_complete_term)
+                    bob_shares.append(bob_complete_term)
+
+                p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
+                closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
+                                         input_p_bits_cc)  # Returns the index of the smallest sum, i.e. closest cluster
+                closest_cluster.append(closest)  # add the closest cluster for the data point.
+
+            # 2. recompute the mean
+            for _k in range(k):
+                data_point_indicies = np.where(np.asarray(closest_cluster) == _k)[0]
+
+                alice_sum = [0, 0]  # track of alice's summation for current cluster centroids for data point she owns. (
+                # (feature1, feature2)
+                alice_owns_count = [0, 0]  # track of number of data points she owns in current cluster centroid.
+                bob_sum = [0, 0]
+                bob_owns_count = [0, 0]
+
+                for data_point_index in data_point_indicies:
+                    alice_owns_feature1, alice_owns_feature2 = idx_owner(data_point_index, alice_data)
+
+                    if alice_owns_feature1:
+                        alice_sum[0] += data[data_point_index][0]
+                    else:
+                        bob_sum[0] += data[data_point_index][0]
+
+                    if alice_owns_feature2:
+                        alice_sum[1] += data[data_point_index][1]
+                    else:
+                        bob_sum[1] += data[data_point_index][1]
+
+                    if alice_owns_feature1 and alice_owns_feature2:  # alice owns everything. # 1 1
+                        alice_owns_count = [count + 1 for count in alice_owns_count]
+                    elif (not alice_owns_feature1) and (not alice_owns_feature2):  # bob owns everything # 0 0
+                        bob_owns_count = [count + 1 for count in bob_owns_count]
+                    elif alice_owns_feature1:  # 1 0
+                        alice_owns_count[0] += 1
+                        bob_owns_count[1] += 1
+                    else:  # 0 1
+                        alice_owns_count[1] += 1
+                        bob_owns_count[0] += 1
+
+                p_bits_rm, input_p_bits_rm = generate_p_bits_rm()
+
+                for j in range(NUM_FEATURES):
+                    centroids[_k][j] = recomputemean(alice_sum[j], bob_sum[j], alice_owns_count[j], bob_owns_count[j],
+                                              p_bits_rm, input_p_bits_rm)
+
+            # 3. check for termination.
+            alices_centroid_shares = []
+            bobs_centroid_shares = []
+            for centroid, alice_old_centroid, bob_old_centroid in zip(centroids, alice_old_centroids, bob_old_centroids):
                 alice_x, bob_x = generate_share(x, n)
                 alice_y, bob_y = generate_share(y, n)
 
-                # reconstruct_share(alice_x, bob_x, n)
-                # reconstruct_share(alice_y, bob_y, n)
+                # calculate term 1 = old centroids squared.
+                # expand brackets = (ua1 ^ 2 + ub1 ^ 2 + 2ua1b1) + (ua2 ^ 2 + ub2 ^ 2 + 2ua2b2)
+                a_old_squared = 0
+                b_old_squared = 0
 
-                alice_term1 = calculate_alice_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
-                bob_term1 = calculate_bob_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
+                for i in range(NUM_FEATURES):  # iterate over all features.
+                    a_old_squared += (alice_old_centroid[i] ** 2) % n
+                    b_old_squared += (bob_old_centroid[i] ** 2) % n
+                a_share_term1, b_share_term1 = ssp(pubkey, prikey, n, list(alice_old_centroid), list(bob_old_centroid), mult=2)  # calculate 2*uab
 
-                alice_term2 = calculate_term2([alice_x, alice_y], n)  # calculate the summation of her centroid shares.
-                bob_term3 = calculate_term3([bob_x, bob_y], n)  # calculate the summation
+                # calculate term 2 = new centroids squared.
+                a_new_squared = 0
+                b_new_squared = 0
 
-                alice_term4, bob_term4 = ssp(pubkey, prikey, n, [alice_x, alice_y], [bob_x, bob_y], mult=2)
-                alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=2)
-                alice_term6, bob_term6 = ssp(pubkey, prikey, n, data[idx].tolist(), [bob_x, bob_y], mult=2)
-                # print((alice_term5 + bob_term5) % n)
-                # print((alice_term4 + bob_term4) % n)
-                # print((alice_term6 + bob_term6) % n)
+                alice_new_centroid = (alice_x, alice_y)
+                bob_new_centroid = (bob_x, bob_y)
 
-                alice_complete_term = (alice_term1 + alice_term2 + alice_term4 - alice_term5 - alice_term6) % n
-                bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
+                for i in range(NUM_FEATURES):  # iterate over all features.
+                    a_new_squared += (alice_old_centroid[i] ** 2) % n
+                    b_new_squared += (bob_old_centroid[i] ** 2) % n
+                a_share_term2, b_share_term2 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_new_centroid),
+                                                   mult=2)  # calculate 2*uab
 
-                # for checking later. TODO delete
-                # g = np.sqrt((alice_complete_term + bob_complete_term) % n)
-                # h=  dist_euclid(data[idx][0], data[idx][1], x, y)
+                # calculate term 3 = (new_a + new_b) (old_a + old_b) +  (new_a + new_b) (old_a + old_b)
+                a_old_new = 0  # new_a * old_a
+                b_old_new = 0 # new_b * old_b
 
-                alice_shares.append(alice_complete_term)
-                bob_shares.append(bob_complete_term)
+                for i in range(NUM_FEATURES):
+                    a_old_new += (2 * (alice_new_centroid[i] * alice_old_centroid[i])) % n
+                    b_old_new += (2 * (bob_new_centroid[i] * bob_old_centroid[i])) % n
 
-            p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
-            closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
-                                     input_p_bits_cc)  # Returns the index of the smallest sum, i.e. closest cluster
-            print("Closest centroid: {0} | Yao's closest centroid: {1}".format(point_center, closest))
+                # new_b * old_a
+                a_share_term3, b_share_term3 = ssp(pubkey, prikey, n,  list(bob_new_centroid), list(alice_old_centroid),
+                                                   mult=2)  # calculate 2*uab
+
+                # new_a * old_b
+                a_share_term4, b_share_term4 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_old_centroid),
+                                                   mult=2)  # calculate 2*uab
+                alice_centroid_term = (a_old_squared + a_share_term1 + a_new_squared +\
+                                      a_share_term2 + a_old_new + a_share_term3 + a_share_term4) % n
+                bob_centroid_term = (b_old_squared + b_share_term1 + b_new_squared +\
+                                      b_share_term2 + b_old_new + b_share_term3 + b_share_term4) % n
+
+                alices_centroid_shares.append(alice_centroid_term)
+                bobs_centroid_shares.append(bob_centroid_term)
+
+            p_bits_tm = np.random.randint(0, MAX_DATA, (3, 2))  # 3 values; findbiggest(3)
+            input_p_bits_tm = np.random.randint(0, MAX_DATA, (4, 2))  # 4 for findbiggest
+            below_epsilon = 1
+            for a_share, b_share in zip(alices_centroid_shares, bobs_centroid_shares):
+                ab = (a_share + b_share) * 10  # epsilon has to be a integer. 0.2 * 10 = 2.
+                # returns 0 if any is above epsilon, thus 1*0 = 0. if all is below epsilon, remains 1.
+                below_epsilon *= terminate(ab, epsilon, p_bits_tm, input_p_bits_tm)
+
+            converged = bool(below_epsilon)
+        else:
+            print("MAX ITERATIONS REACHED.")
+            converged = True  # too many iterations.
+
 
 
 if __name__ == '__main__':

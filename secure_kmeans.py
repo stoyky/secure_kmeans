@@ -174,16 +174,27 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                     bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
 
                     # for checking later. TODO delete
-                    # g = np.sqrt((alice_complete_term + bob_complete_term) % n)
-                    # h=  dist_euclid(data[idx][0], data[idx][1], x, y)
+                    g = np.sqrt((alice_complete_term + bob_complete_term) % n)
+                    h = dist_euclid(data[idx][0], data[idx][1], x, y)
+
+                    if g != h:
+                        print("error in calculating distnace")
 
                     alice_shares.append(alice_complete_term)
                     bob_shares.append(bob_complete_term)
 
+                temp_dist = []
+                for centroid in centroids:
+                    temp_dist.append(dist_euclid(data[idx][0], data[idx][1], centroid[0], centroid[1]))
+                point_center = (np.argmin(temp_dist))
+
                 p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
                 closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
-                                         input_p_bits_cc)  # Returns the index of the smallest sum, i.e. closest cluster
+                                         input_p_bits_cc, n)  # Returns the index of the smallest sum, i.e. closest cluster
                 closest_cluster.append(closest)  # add the closest cluster for the data point.
+                if point_center != closest:
+                    print("error in calculating centroid")
+                    closest = closestcluster(alice_shares, bob_shares, p_bits_cc, input_p_bits_cc, n)  # Returns the index of the smallest sum, i.e. closest cluster
 
             # 2. recompute the mean
             for _k in range(k):

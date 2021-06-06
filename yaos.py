@@ -147,7 +147,7 @@ def division(a, b, p_bits, input_p_bits):  # Returns a / b. Still need to sketch
 
 
 # Create the circuits
-def closestcluster(x, y, p_bits, input_p_bits):  # Returns the index of the smallest sum
+def closestcluster(x, y, p_bits, input_p_bits, n):  # Returns the index of the smallest sum, n = modulo
     summation = []
     smallest = 0
     for k in range(len(x)):  # First k circuits
@@ -155,6 +155,17 @@ def closestcluster(x, y, p_bits, input_p_bits):  # Returns the index of the smal
         b = [int(j) for j in bin(y[k])[2:]]
         a, b = padzeros(a, b)
         summation.append(add(a, b, p_bits[:4], input_p_bits[:2]))
+
+    new_summation = []
+    for summ in summation:
+        answer_string = ""
+        for s in summ:
+            answer_string += str(s)
+
+        int_summ = int(answer_string, 2) % n  # convert string to value
+        new_summation.append([int(j) for j in bin(int_summ)[2:]])
+    summation = new_summation
+
     for k in range(len(x) - 1):  # Second k circuits
         summation[smallest], summation[k + 1] = padzeros(summation[smallest], summation[k + 1])
         small = findsmallest(summation[smallest], summation[k + 1], p_bits[4:], input_p_bits[2:])

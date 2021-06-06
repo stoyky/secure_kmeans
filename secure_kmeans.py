@@ -69,7 +69,7 @@ def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
 
-def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
+def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
     centroids = random_centroids(k)
     converged = False
     current_iter = 0
@@ -81,8 +81,6 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
             current_iter += 1
             # calculating the distance between point and centroid.
             closest_cluster = []  # keeps track of the closest centroid for each data point (index mapping)
-            alice_old_centroids = []
-            bob_old_centroids = []
 
 
             # NAIVE K-MEANS
@@ -139,7 +137,7 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
             else:
                 naive_centroids = centroids_avg
 
-
+            point_center_array = []
             # SECURE K-MEANS ALGORITHM
             # 1. calculate the closest centroid.
             for idx in range(data.shape[0]):  # iterates 100 times.
@@ -147,6 +145,9 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                 alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
                 bob_shares = []
 
+                alice_old_centroids = []
+                bob_old_centroids = []
+                old_centroids = []
                 for x, y in centroids:
                     alice_x, bob_x = generate_share(x, n)
                     alice_y, bob_y = generate_share(y, n)
@@ -173,7 +174,7 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                     alice_complete_term = (alice_term1 + alice_term2 + alice_term4 - alice_term5 - alice_term6) % n
                     bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
 
-                    # for checking later. TODO delete
+                    # for checking later. TODO delete debug statement
                     g = np.sqrt((alice_complete_term + bob_complete_term) % n)
                     h = dist_euclid(data[idx][0], data[idx][1], x, y)
 
@@ -183,22 +184,46 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                     alice_shares.append(alice_complete_term)
                     bob_shares.append(bob_complete_term)
 
+                p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
+                closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
+                                         input_p_bits_cc,
+                                         n)  # Returns the index of the smallest sum, i.e. closest cluster
+                closest_cluster.append(closest)  # add the closest cluster for the data point.
+
+                # TODO delete, debug statement
                 temp_dist = []
                 for centroid in centroids:
                     temp_dist.append(dist_euclid(data[idx][0], data[idx][1], centroid[0], centroid[1]))
                 point_center = (np.argmin(temp_dist))
+                point_center_array.append(point_center)
 
-                p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
-                closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
-                                         input_p_bits_cc, n)  # Returns the index of the smallest sum, i.e. closest cluster
-                closest_cluster.append(closest)  # add the closest cluster for the data point.
                 if point_center != closest:
+                    print("Actual: {0}, from secure kmeans: {1}".format(point_center, closest))
+                    print((alice_shares[0] + bob_shares[0]) % n)
+                    print((alice_shares[1] + bob_shares[1]) % n)
+                    print((alice_shares[2] + bob_shares[2]) % n)
                     print("error in calculating centroid")
                     closest = closestcluster(alice_shares, bob_shares, p_bits_cc, input_p_bits_cc, n)  # Returns the index of the smallest sum, i.e. closest cluster
+                # END TODO DELETE.
 
+            centroids_avg = []
             # 2. recompute the mean
             for _k in range(k):
                 data_point_indicies = np.where(np.asarray(closest_cluster) == _k)[0]
+
+                # TODO DELETE. FOR DEBUGGING
+                summ = 0
+                summ1 = 0
+                gh = np.where(np.asarray(point_center_array) == _k)[0]
+
+                for g in gh:
+                    summ += data[g][0]
+                    summ1 += data[g][1]
+                summ = summ / len(gh)
+                summ1 = summ1 / len(gh)
+
+                centroids_avg.append((summ, summ1))
+                # END TODO DELETE.
 
                 alice_sum = [0, 0]  # track of alice's summation for current cluster centroids for data point she owns. (
                 # (feature1, feature2)
@@ -235,13 +260,14 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                 for j in range(NUM_FEATURES):
                     centroids[_k][j] = recomputemean(alice_sum[j], bob_sum[j], alice_owns_count[j], bob_owns_count[j],
                                               p_bits_rm, input_p_bits_rm)
+                print()
 
             # 3. check for termination.
             alices_centroid_shares = []
             bobs_centroid_shares = []
             for centroid, alice_old_centroid, bob_old_centroid in zip(centroids, alice_old_centroids, bob_old_centroids):
-                alice_x, bob_x = generate_share(x, n)
-                alice_y, bob_y = generate_share(y, n)
+                alice_x, bob_x = generate_share(centroid[0], n)
+                alice_y, bob_y = generate_share(centroid[1], n)
 
                 # calculate term 1 = old centroids squared.
                 # expand brackets = (ua1 ^ 2 + ub1 ^ 2 + 2ua1b1) + (ua2 ^ 2 + ub2 ^ 2 + 2ua2b2)
@@ -261,8 +287,8 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                 bob_new_centroid = (bob_x, bob_y)
 
                 for i in range(NUM_FEATURES):  # iterate over all features.
-                    a_new_squared += (alice_old_centroid[i] ** 2) % n
-                    b_new_squared += (bob_old_centroid[i] ** 2) % n
+                    a_new_squared += (alice_new_centroid[i] ** 2) % n
+                    b_new_squared += (bob_new_centroid[i] ** 2) % n
                 a_share_term2, b_share_term2 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_new_centroid),
                                                    mult=2)  # calculate 2*uab
 
@@ -289,6 +315,11 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
                 alices_centroid_shares.append(alice_centroid_term)
                 bobs_centroid_shares.append(bob_centroid_term)
 
+                # TODO DELETE.
+                g  = np.sqrt((alice_centroid_term + bob_centroid_term) % n)
+                h = dist_euclid(centroid[0], centroid[1], old_centroids[0][0], old_centroids[0][1])
+
+
             p_bits_tm = np.random.randint(0, MAX_DATA, (3, 2))  # 3 values; findbiggest(3)
             input_p_bits_tm = np.random.randint(0, MAX_DATA, (4, 2))  # 4 for findbiggest
             below_epsilon = 1
@@ -313,11 +344,6 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=10000, max_iter=20):
             save_name = r"images/secure_kmeans_{0}.png".format(current_iter)
             plt.savefig(save_name)
             plt.clf()
-
-
-
-
-
         else:
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.

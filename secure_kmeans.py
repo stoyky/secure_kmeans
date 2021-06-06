@@ -137,7 +137,7 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
             else:
                 naive_centroids = centroids_avg
 
-            point_center_array = []
+            point_center_array = []  # TODO DELETE.
             # SECURE K-MEANS ALGORITHM
             # 1. calculate the closest centroid.
             for idx in range(data.shape[0]):  # iterates 100 times.
@@ -152,7 +152,7 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
                     alice_x, bob_x = generate_share(x, n)
                     alice_y, bob_y = generate_share(y, n)
 
-                    old_centroids = deepcopy(centroids)
+                    old_centroids = deepcopy(centroids)  # TODO DELETE.
                     alice_old_centroids.append((alice_x, alice_y))
                     bob_old_centroids.append((bob_x, bob_y))
                     # reconstruct_share(alice_x, bob_x, n)
@@ -260,7 +260,6 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
                 for j in range(NUM_FEATURES):
                     centroids[_k][j] = recomputemean(alice_sum[j], bob_sum[j], alice_owns_count[j], bob_owns_count[j],
                                               p_bits_rm, input_p_bits_rm)
-                print()
 
             # 3. check for termination.
             alices_centroid_shares = []
@@ -325,7 +324,6 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
             below_epsilon = 1
             for a_share, b_share in zip(alices_centroid_shares, bobs_centroid_shares):
                 ab = (a_share + b_share) % n  # epsilon has to be a integer. 0.2 * 10 = 2.
-                print(ab)
                 # returns 0 if any is above epsilon, thus 1*0 = 0. if all is below epsilon, remains 1.
                 below_epsilon *= terminate(ab, epsilon, p_bits_tm, input_p_bits_tm)
 
@@ -347,6 +345,29 @@ def secure_kmeans(data, alice_data, bob_data, k=3, epsilon=1, max_iter=15):
         else:
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.
+
+
+    # 5. Allocate cluster centers to Alice and Bob
+    alice_cluster_centers = []
+    bob_cluster_centers = []
+    for _k in range(k):
+        data_point_indicies = np.where(np.asarray(closest_cluster) == _k)[0]
+
+        for idx in data_point_indicies:
+            alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
+            if alice_owns_feature1 and alice_owns_feature2:  # alice owns all features
+                alice_cluster_centers.append(tuple(centroids[_k]))
+            elif not(alice_owns_feature1) and not(alice_owns_feature2):  # bob owns all features.
+                bob_cluster_centers.append(tuple(centroids[_k]))
+            else:# they share features
+                alice_cluster_centers.append(tuple(centroids[_k]))
+                bob_cluster_centers.append(tuple(centroids[_k]))
+
+    alice_cluster_centers = set(alice_cluster_centers)
+    bob_cluster_centers = set(bob_cluster_centers)
+
+    print("Alice's cluster centers are: {0}".format(alice_cluster_centers))
+    print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
 
 
 if __name__ == '__main__':

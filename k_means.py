@@ -29,13 +29,13 @@ def kmeans(D, k, max_iter, epsilon):
           temp.append(point[1])
       result[i] = temp
 
-    plt.figure(figsize=(4,4))
-    plt.title("")
-    colors = ["red", "blue", "green"]
-    for i in range(0, k):
-      plt.scatter(centroids[i][0], centroids[i][1], color="black",sizes=[100.0], marker='X', zorder=1)
-      for point in result[i]:
-        plt.scatter(point[0], point[1], sizes=[10.0], color=colors[i], zorder=0)
+    # plt.figure(figsize=(4,4))
+    # plt.title("")
+    # colors = ["red", "blue", "green"]
+    # for i in range(0, k):
+    #   plt.scatter(centroids[i][0], centroids[i][1], color="black",sizes=[100.0], marker='X', zorder=1)
+    #   for point in result[i]:
+    #     plt.scatter(point[0], point[1], sizes=[10.0], color=colors[i], zorder=0)
 
     # need to check if centroids differ by no more than epsilon and then just terminate
     centroids_avg = []
@@ -44,6 +44,6 @@ def kmeans(D, k, max_iter, epsilon):
 
     centroids = centroids_avg
 
-kmeans(D, k, 10, 0.01)
+#kmeans(D, k, 10, 0.01)
 
 

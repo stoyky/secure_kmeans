@@ -10,7 +10,7 @@ from random_share import generate_share, reconstruct_share
 from ssp import ssp
 from yaos import generate_p_bits_cc, closestcluster, recomputemean, generate_p_bits_rm, terminate
 from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
-
+from sklearn.datasets import make_blobs
 
 MAX_DATA = 50  # max value that an element in the data can go up to.
 NUM_FEATURES = 2  # number of attributes in the data set.
@@ -70,8 +70,8 @@ def random_centroids(k):
 def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
-def secure_kmeans(data, alice_data, bob_data, round, k, epsilon, max_iter):
-    centroids = random_centroids(k)
+def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_iter):
+
     converged = False
     current_iter = 0
 
@@ -285,8 +285,7 @@ def secure_kmeans(data, alice_data, bob_data, round, k, epsilon, max_iter):
     #print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
     print("done")
 
-def naive_kmeans(data, k, epsilon, max_iter):
-    centroids = random_centroids(k)
+def naive_kmeans(data, centroids, k, epsilon, max_iter):
     converged = False
     current_iter = 0
 
@@ -315,8 +314,10 @@ def naive_kmeans(data, k, epsilon, max_iter):
                 for g in gh:
                     summ += data[g][0]
                     summ1 += data[g][1]
-                summ = summ / len(gh)
-                summ1 = summ1 / len(gh)
+
+                if len(gh) > 0:
+                    summ = summ / len(gh)
+                    summ1 = summ1 / len(gh)
 
                 centroids_avg.append((summ, summ1))
 
@@ -324,7 +325,7 @@ def naive_kmeans(data, k, epsilon, max_iter):
             naive_converg = 1
             for i in range(k):
                 u = dist_euclid(centroids[i][0], centroids[i][1], centroids_avg[i][0], centroids_avg[i][1])
-                if u <= epsilon:
+                if u <= 0.1:
                     naive_converg *= 1
                 else:
                     naive_converg *= 0
@@ -348,16 +349,22 @@ def naive_kmeans(data, k, epsilon, max_iter):
             else:
                 centroids = centroids_avg
 
+def gen_data(k):
+    data, y = make_blobs(n_samples=100, centers=3, cluster_std=10, center_box=[0, 100], random_state=3)
+    data = np.rint(data).astype(int)
+    a, b = create_random_data(data)
+    return data, a, b
+
 if __name__ == '__main__':
     k = 3
     epsilon = 1
     max_iter = 15
 
-    data = np.random.randint(MAX_DATA, size=(100, NUM_FEATURES))
-    a, b = create_random_data(data)
+    centroids = [[40, 29], [33, 20], [9, 7]]
+    data, a, b = gen_data(k)
 
     print("secure k-means running...")
-    secure_kmeans(data, a, b, round, k,  epsilon, max_iter)
+    secure_kmeans(data, centroids, a, b, round, k,  epsilon, max_iter)
     print("naive k-means running...")
-    naive_kmeans(data, k, epsilon, max_iter)
+    naive_kmeans(data, centroids, k, epsilon, max_iter)
 

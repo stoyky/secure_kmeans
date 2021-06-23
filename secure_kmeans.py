@@ -70,7 +70,7 @@ def random_centroids(k):
 def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
-def secure_kmeans(data, alice_data, bob_data, round, k=3, epsilon=1, max_iter=15):
+def secure_kmeans(data, alice_data, bob_data, round, k, epsilon, max_iter):
     centroids = random_centroids(k)
     converged = False
     current_iter = 0
@@ -355,9 +355,9 @@ if __name__ == '__main__':
 
     data = np.random.randint(MAX_DATA, size=(100, NUM_FEATURES))
     a, b = create_random_data(data)
-    
+
     print("secure k-means running...")
-    secure_kmeans(data, a, b, round)
+    secure_kmeans(data, a, b, round, k,  epsilon, max_iter)
     print("naive k-means running...")
     naive_kmeans(data, k, epsilon, max_iter)
 

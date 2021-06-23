@@ -1,0 +1,8 @@
+
+[cli]
+click
+
+[examples]
+numpy
+scipy
+sklearn

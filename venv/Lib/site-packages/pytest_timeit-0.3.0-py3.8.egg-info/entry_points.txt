@@ -1,0 +1,3 @@
+[pytest11]
+timeit = pytest_timeit
+

@@ -1,0 +1,13 @@
+LICENSE
+MANIFEST.in
+README.rst
+pytest_timeit.py
+setup.cfg
+setup.py
+pytest_timeit.egg-info/PKG-INFO
+pytest_timeit.egg-info/SOURCES.txt
+pytest_timeit.egg-info/dependency_links.txt
+pytest_timeit.egg-info/entry_points.txt
+pytest_timeit.egg-info/not-zip-safe
+pytest_timeit.egg-info/requires.txt
+pytest_timeit.egg-info/top_level.txt

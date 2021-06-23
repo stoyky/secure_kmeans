@@ -244,19 +244,9 @@ def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_
 
             converged = bool(below_epsilon)
 
-            # 4. plot some nice graphs.
-            colours = ["red", "blue", "green"]
-            fig = plt.Figure()
-            for i in range(k):
-                plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
-                data_point_indicies = np.where(np.asarray(closest_cluster) == i)[0]
+            # # 4. plot some nice graphs.
+            plot_and_save(data, centroids, closest_cluster, current_iter, secure=True)
 
-                for index in data_point_indicies:
-                    plt.scatter(data[index][0], data[index][1], color=colours[i])
-
-            save_name = r"images/secure_kmeans_{0}.png".format(current_iter)
-            plt.savefig(save_name)
-            plt.clf()
         else:
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.
@@ -330,24 +320,32 @@ def naive_kmeans(data, centroids, k, epsilon, max_iter):
                 else:
                     naive_converg *= 0
 
-            colours = ["red", "blue", "green", "purple", "yellow"]
-            fig = plt.Figure()
-            for i in range(k):
-                plt.scatter(centroids_avg[i][0], centroids_avg[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
-                data_point_indicies = np.where(np.asarray(point_center) == i)[0]
-
-                for index in data_point_indicies:
-                    plt.scatter(data[index][0], data[index][1], color=colours[i])
-
-            save_name = r"images/naive_kmeans_{0}.png".format(current_iter)
-            plt.savefig(save_name)
-            plt.clf()
+            # 4. Plot nice images
+            plot_and_save(data, centroids, point_center, current_iter, secure=False)
 
             if naive_converg == 1:
                 print("naive k-means terminated.")
                 return
             else:
                 centroids = centroids_avg
+
+
+def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
+    colours = ["red", "blue", "green", "purple", "yellow"]
+    fig = plt.Figure()
+    for i in range(k):
+        plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
+        data_point_indicies = np.where(np.asarray(closest_cluster) == i)[0]
+
+        for index in data_point_indicies:
+            plt.scatter(data[index][0], data[index][1], color=colours[i])
+
+    if secure:
+        save_name = r"images/secure_kmeans_{0}.png".format(current_iter)
+    else:
+        save_name = r"images/naive_kmeans_{0}.png".format(current_iter)
+    plt.savefig(save_name)
+    plt.clf()
 
 def gen_data(k):
     data, y = make_blobs(n_samples=100, centers=3, cluster_std=10, center_box=[0, 100], random_state=3)
@@ -367,4 +365,5 @@ if __name__ == '__main__':
     secure_kmeans(data, centroids, a, b, round, k,  epsilon, max_iter)
     print("naive k-means running...")
     naive_kmeans(data, centroids, k, epsilon, max_iter)
+    print("")
 

@@ -11,6 +11,9 @@ from ssp import ssp
 from yaos import generate_p_bits_cc, closestcluster, recomputemean, generate_p_bits_rm, terminate
 from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
 from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+from scipy.cluster.vq import kmeans
+import cProfile
 
 MAX_DATA = 50  # max value that an element in the data can go up to.
 NUM_FEATURES = 2  # number of attributes in the data set.
@@ -70,7 +73,7 @@ def random_centroids(k):
 def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
-def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_iter):
+def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_iter, plot=False):
 
     converged = False
     current_iter = 0
@@ -245,7 +248,8 @@ def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_
             converged = bool(below_epsilon)
 
             # # 4. plot some nice graphs.
-            plot_and_save(data, centroids, closest_cluster, current_iter, secure=True)
+            if plot:
+                plot_and_save(data, centroids, closest_cluster, current_iter, secure=True)
 
         else:
             print("MAX ITERATIONS REACHED.")
@@ -275,7 +279,7 @@ def secure_kmeans(data, centroids, alice_data, bob_data, round, k, epsilon, max_
     #print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
     print("done")
 
-def naive_kmeans(data, centroids, k, epsilon, max_iter):
+def naive_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
     converged = False
     current_iter = 0
 
@@ -321,13 +325,16 @@ def naive_kmeans(data, centroids, k, epsilon, max_iter):
                     naive_converg *= 0
 
             # 4. Plot nice images
-            plot_and_save(data, centroids, point_center, current_iter, secure=False)
+            if plot:
+                plot_and_save(data, centroids, point_center, current_iter, secure=False)
 
             if naive_converg == 1:
                 print("naive k-means terminated.")
                 return
             else:
                 centroids = centroids_avg
+        else:
+            return
 
 
 def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
@@ -347,8 +354,8 @@ def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
     plt.savefig(save_name)
     plt.clf()
 
-def gen_data(k):
-    data, y = make_blobs(n_samples=100, centers=3, cluster_std=10, center_box=[0, 100], random_state=3)
+def gen_data(k, n_samples):
+    data, y = make_blobs(n_samples=n_samples, centers=3, cluster_std=10, center_box=[0, 100], random_state=3)
     data = np.rint(data).astype(int)
     a, b = create_random_data(data)
     return data, a, b
@@ -357,13 +364,43 @@ if __name__ == '__main__':
     k = 3
     epsilon = 1
     max_iter = 15
+    n_samples = 100
 
     centroids = [[40, 29], [33, 20], [9, 7]]
-    data, a, b = gen_data(k)
+    data, a, b = gen_data(k, n_samples=100)
 
-    print("secure k-means running...")
+    # print("sklearn k-means running...")
+    # KMeans(data, k, max_iter, epsilon)
+    # print("naive k-means running...")
+    # naive_kmeans(data, centroids, k, epsilon, max_iter)
+    # print("secure k-means running...")
     secure_kmeans(data, centroids, a, b, round, k,  epsilon, max_iter)
-    print("naive k-means running...")
-    naive_kmeans(data, centroids, k, epsilon, max_iter)
-    print("")
+
+    # times_sklearn = []
+    # for i in range(10000, 21000, 1000):
+    #         print(i)
+    #         data, a, b = gen_data(k, n_samples=i)
+    #         t = Timer(lambda: KMeans(data, k, max_iter, epsilon))
+    #         times_sklearn.append(t.timeit(number=10))
+    #
+    #
+    # times_naive = []
+    # for i in range(10000, 21000, 1000):
+    #     print(i)
+    #     data, a, b = gen_data(k, n_samples=i)
+    #     t = Timer(lambda: naive_kmeans(data, centroids, k, epsilon, max_iter))
+    #     times_naive.append(t.timeit(number=10))
+
+    # times_secure = []
+    # for i in range(10000, 21000, 1000):
+    #     print(i)
+    #     data, a, b = gen_data(k, n_samples=i)
+    #     t = Timer(lambda: secure_kmeans(data, centroids, a, b, round, k, epsilon, max_iter, plot=False))
+    #     times_secure.append(t.timeit(number=10))
+    #
+    # # print(times_sklearn)
+    # # print(times_naive)
+    # print(times_secure)
+    # cProfile.run('secure_kmeans(data, centroids, a, b, round, k, epsilon, max_iter, plot=False)')
+
 

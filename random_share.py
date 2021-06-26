@@ -47,3 +47,10 @@ def generate_share(x, n):  # x = value to split, n = finite field
 
 def reconstruct_share(x, y, n):
     return (x + y) % n
+
+if __name__ == '__main__':
+    shares = gen_shares(1234, 2)
+    print("Shares:")
+    print(shares)
+    print("Reconstructed value")
+    print(reconstruct(shares))

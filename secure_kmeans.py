@@ -367,8 +367,33 @@ if __name__ == '__main__':
     n_samples = 100
 
     centroids = [[40, 29], [33, 20], [9, 7]]
-    data = gen_data(k, n_samples=100)
 
-    secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=True)
+    timings_sklearn = []
+    for i in range(10000, 21000, 1000):
+        print(i)
+        data = gen_data(k, n_samples=i)
+        a, b = create_random_data(data)
+        t = Timer(lambda: KMeans(n_clusters=k, max_iter=max_iter).fit(data))
+        timings_sklearn.append(t.timeit(number=10))
+    print(timings_sklearn)
+
+    timings_naive = []
+    for i in range(10000, 21000, 1000):
+        print(i)
+        data = gen_data(k, n_samples=i)
+        a, b = create_random_data(data)
+        t = Timer(lambda: naive_kmeans(data, centroids, k, epsilon, max_iter, False))
+        timings_naive.append(t.timeit(number=10))
+    print(timings_naive)
+
+    timings_secure = []
+    for i in range(10000, 21000, 1000):
+        print(i)
+        data = gen_data(k, n_samples=i)
+        a, b = create_random_data(data)
+        t = Timer(lambda: secure_kmeans(data, centroids, round, k, epsilon, max_iter, False))
+        timings_secure.append(t.timeit(number=10))
+    print(timings_secure)
+
 
 

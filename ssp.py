@@ -23,10 +23,11 @@ def ssp(pubkey, prikey, n, X, Y, mult=1):
     for i in range(1, N):
         w *= (c[i] ** Y[i])
 
+
     sb = secrets.randbelow(n)
     t = pubkey.raw_encrypt(-sb, r_value=3)
     w = (t * w)
-    sa = prikey.raw_decrypt(w)
+    sa = prikey.raw_decrypt(int(w))
 
     #truth = (mult*dot_product - sb) % n
     #print(" sa: {0} | sb: {1} | 2x dot product: {2} | true sa: {3} | n: {4} ".format(sa, sb, mult*dot_product, truth, n))

@@ -125,9 +125,9 @@ def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
                     # for checking later. TODO delete debug statement
                     g = np.sqrt((alice_complete_term + bob_complete_term) % n)
                     h = dist_euclid(data[idx][0], data[idx][1], x, y)
-
-                    if g != h:
-                        print("error in calculating distance")
+                    #
+                    # if g != h:
+                    #     print("error in calculating distance")
 
                     alice_shares.append(alice_complete_term)
                     bob_shares.append(bob_complete_term)
@@ -356,44 +356,11 @@ def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
     plt.clf()
 
 def gen_data(k, n_samples):
-    data, y = make_blobs(n_samples=n_samples, centers=3, cluster_std=10, center_box=[0, 100], random_state=3)
+    data, y = make_blobs(n_samples=n_samples, centers=3, cluster_std=10, center_box=[0, MAX_DATA], random_state=3)
     data = np.rint(data).astype(int)
     return data
 
-if __name__ == '__main__':
-    k = 3
-    epsilon = 1
-    max_iter = 15
-    n_samples = 100
 
-    centroids = [[40, 29], [33, 20], [9, 7]]
-
-    timings_sklearn = []
-    for i in range(10000, 21000, 1000):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        a, b = create_random_data(data)
-        t = Timer(lambda: KMeans(n_clusters=k, max_iter=max_iter).fit(data))
-        timings_sklearn.append(t.timeit(number=10))
-    print(timings_sklearn)
-
-    timings_naive = []
-    for i in range(10000, 21000, 1000):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        a, b = create_random_data(data)
-        t = Timer(lambda: naive_kmeans(data, centroids, k, epsilon, max_iter, False))
-        timings_naive.append(t.timeit(number=10))
-    print(timings_naive)
-
-    timings_secure = []
-    for i in range(10000, 21000, 1000):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        a, b = create_random_data(data)
-        t = Timer(lambda: secure_kmeans(data, centroids, round, k, epsilon, max_iter, False))
-        timings_secure.append(t.timeit(number=10))
-    print(timings_secure)
 
 
 

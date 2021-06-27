@@ -14,14 +14,13 @@ def graph_performance(sk, naive, secure, range_start, range_end, step):
     plt.legend(['scikit k-means', 'naive k-means', 'secure k-means'])
     plt.show()
 
-
 if __name__ == '__main__':
     k = 3
     epsilon = 1
     max_iter = 15
 
     range_start = 1000
-    range_end = 5000
+    range_end = 3000
     step = 1000
     n_timings = 10
 

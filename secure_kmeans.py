@@ -1,12 +1,10 @@
-import numpy as np
-import random
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from phe import paillier
 from random_share import generate_share
 from ssp import ssp
-from yaos import generate_p_bits_cc, closestcluster, recomputemean, generate_p_bits_rm, terminate
-from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
+from yaos import *
+from calculate_terms import *
 from sklearn.datasets import make_blobs
 
 MAX_DATA = 50  # max value that an element in the data can go up to.

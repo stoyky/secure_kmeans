@@ -25,6 +25,7 @@ def ssp(pubkey, prikey, n, X, Y, mult=1):
     for i in range(1, N):
         w *= (c[i] ** Y[i])
 
+
     sb = secrets.randbelow(n)
     t = pubkey.raw_encrypt(-sb, r_value=3)
     w = (t * w)

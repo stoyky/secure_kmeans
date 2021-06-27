@@ -3,8 +3,10 @@ import secrets
 import phe.paillier as paillier
 import phe.util as pheu
 
+
 def dot(K, L):
     return sum(i[0] * i[1] for i in zip(K, L))
+
 
 def ssp(pubkey, prikey, n, X, Y, mult=1):
     dot_product = dot(X,Y)
@@ -22,7 +24,6 @@ def ssp(pubkey, prikey, n, X, Y, mult=1):
 
     for i in range(1, N):
         w *= (c[i] ** Y[i])
-
 
     sb = secrets.randbelow(n)
     t = pubkey.raw_encrypt(-sb, r_value=3)

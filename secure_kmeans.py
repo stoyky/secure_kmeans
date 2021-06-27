@@ -1,20 +1,13 @@
 import numpy as np
 import random
 from copy import deepcopy
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 from phe import paillier
-import timeit
-from timeit import Timer
-from random_share import generate_share, reconstruct_share
+from random_share import generate_share
 from ssp import ssp
 from yaos import generate_p_bits_cc, closestcluster, recomputemean, generate_p_bits_rm, terminate
 from calculate_terms import calculate_alice_term1, calculate_term2, calculate_bob_term1, calculate_term3
 from sklearn.datasets import make_blobs
-from sklearn.cluster import KMeans
-from scipy.cluster.vq import kmeans
-import cProfile
-# python -m cProfile -o secure_kmeans.prof secure_kmeans.py
 
 MAX_DATA = 50  # max value that an element in the data can go up to.
 NUM_FEATURES = 2  # number of attributes in the data set.
@@ -74,7 +67,8 @@ def random_centroids(k):
 def dist_euclid(x1, y1, x2, y2):
     return np.sqrt(((x1 - x2) ** 2 + (y1 - y2) ** 2) % n)
 
-def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
+
+def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
     alice_data, bob_data = create_random_data(data)
     converged = False
     current_iter = 0
@@ -126,8 +120,8 @@ def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
                     g = np.sqrt((alice_complete_term + bob_complete_term) % n)
                     h = dist_euclid(data[idx][0], data[idx][1], x, y)
                     #
-                    # if g != h:
-                    #     print("error in calculating distance")
+                    if g != h:
+                        print("error in calculating distance")
 
                     alice_shares.append(alice_complete_term)
                     bob_shares.append(bob_complete_term)
@@ -211,7 +205,7 @@ def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
 
                 # calculate term 3 = (new_a + new_b) (old_a + old_b) +  (new_a + new_b) (old_a + old_b)
                 a_old_new = 0  # new_a * old_a
-                b_old_new = 0 # new_b * old_b
+                b_old_new = 0  # new_b * old_b
 
                 for i in range(NUM_FEATURES):
                     a_old_new += (2 * (alice_new_centroid[i] * alice_old_centroid[i])) % n
@@ -232,10 +226,9 @@ def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
                 alices_centroid_shares.append(alice_centroid_term)
                 bobs_centroid_shares.append(bob_centroid_term)
 
-                # TODO DELETE.
-                g  = np.sqrt((alice_centroid_term + bob_centroid_term) % n)
-                h = dist_euclid(centroid[0], centroid[1], old_centroids[0][0], old_centroids[0][1])
-
+                # # TODO DELETE.
+                # g  = np.sqrt((alice_centroid_term + bob_centroid_term) % n)
+                # h = dist_euclid(centroid[0], centroid[1], old_centroids[0][0], old_centroids[0][1])
 
             p_bits_tm = np.random.randint(0, MAX_DATA, (3, 2))  # 3 values; findbiggest(3)
             input_p_bits_tm = np.random.randint(0, MAX_DATA, (4, 2))  # 4 for findbiggest
@@ -250,35 +243,37 @@ def secure_kmeans(data, centroids, round, k, epsilon, max_iter, plot=False):
 
             # # 4. plot some nice graphs.
             if plot:
-                plot_and_save(data, centroids, closest_cluster, current_iter, secure=True)
+                plot_and_save(data, k, centroids, closest_cluster, current_iter, secure=True)
 
         else:
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.
 
-
     # 5. Allocate cluster centers to Alice and Bob
     alice_cluster_centers = []
     bob_cluster_centers = []
     for _k in range(k):
-        data_point_indicies = np.where(np.asarray(closest_cluster) == _k)[0]
+        data_point_indices = np.where(np.asarray(closest_cluster) == _k)[0]
 
-        for idx in data_point_indicies:
+        for idx in data_point_indices:
             alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
             if alice_owns_feature1 and alice_owns_feature2:  # alice owns all features
                 alice_cluster_centers.append(tuple(centroids[_k]))
-            elif not(alice_owns_feature1) and not(alice_owns_feature2):  # bob owns all features.
+                # bob owns all features.
+            elif not(alice_owns_feature1) and not(alice_owns_feature2):
                 bob_cluster_centers.append(tuple(centroids[_k]))
-            else:# they share features
+                # they share features
+            else:
                 alice_cluster_centers.append(tuple(centroids[_k]))
                 bob_cluster_centers.append(tuple(centroids[_k]))
 
     alice_cluster_centers = set(alice_cluster_centers)
     bob_cluster_centers = set(bob_cluster_centers)
 
-    #print("Alice's cluster centers are: {0}".format(alice_cluster_centers))
-    #print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
+    # print("Alice's cluster centers are: {0}".format(alice_cluster_centers))
+    # print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
     print("done")
+
 
 def naive_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
     converged = False
@@ -292,7 +287,6 @@ def naive_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             closest_cluster = []  # keeps track of the closest centroid for each data point (index mapping)
             # NAIVE K-MEANS
             # 1. calculate the closest centroid
-            closest_cluster = []
             for point in data:
                 temp_dist = []
                 for centroid in centroids:
@@ -320,14 +314,14 @@ def naive_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             naive_converg = 1
             for i in range(k):
                 u = dist_euclid(centroids[i][0], centroids[i][1], centroids_avg[i][0], centroids_avg[i][1])
-                if u <= 0.1:
+                if u <= epsilon:
                     naive_converg *= 1
                 else:
                     naive_converg *= 0
 
             # 4. Plot nice images
             if plot:
-                plot_and_save(data, centroids, closest_cluster, current_iter, secure=False)
+                plot_and_save(data, k, centroids, closest_cluster, current_iter, secure=False)
 
             if naive_converg == 1:
                 print("naive k-means terminated.")
@@ -338,14 +332,14 @@ def naive_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             return
 
 
-def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
+def plot_and_save(data, k,  centroids, closest_cluster, current_iter, secure=False):
     colours = ["red", "blue", "green", "purple", "yellow"]
-    fig = plt.Figure()
+    plt.Figure()
     for i in range(k):
         plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
-        data_point_indicies = np.where(np.asarray(closest_cluster) == i)[0]
+        data_point_indices = np.where(np.asarray(closest_cluster) == i)[0]
 
-        for index in data_point_indicies:
+        for index in data_point_indices:
             plt.scatter(data[index][0], data[index][1], color=colours[i])
 
     if secure:
@@ -355,12 +349,8 @@ def plot_and_save(data, centroids, closest_cluster, current_iter, secure=False):
     plt.savefig(save_name)
     plt.clf()
 
+
 def gen_data(k, n_samples):
-    data, y = make_blobs(n_samples=n_samples, centers=3, cluster_std=10, center_box=[0, MAX_DATA], random_state=3)
+    data, y = make_blobs(n_samples=n_samples, centers=k, cluster_std=10, center_box=[0, MAX_DATA], random_state=3)
     data = np.rint(data).astype(int)
     return data
-
-
-
-
-

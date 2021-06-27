@@ -1,5 +1,3 @@
-from ssp import ssp
-
 def calculate_alice_term1(data, alice_owns_feature1, alice_owns_feature2, n):
     if alice_owns_feature1 and alice_owns_feature2:
         return (data[0] ** 2 + data[1] ** 2) % n
@@ -26,7 +24,7 @@ def calculate_bob_term1(data, alice_owns_feature1, alice_owns_feature2, n):
 def calculate_term2(centroids, n):  # list of shares of centroids she owns for all features.
     summation = 0
     for centroid in centroids:
-        summation += ((centroid **2) % n)
+        summation += ((centroid ** 2) % n)
 
     return summation
 

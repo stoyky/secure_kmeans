@@ -19,8 +19,8 @@ def ssp(pubkey, prikey, n, X, Y, mult):
     for i in range(N):
       c.append((pubkey.raw_encrypt(X[i], r_value=25)))  #r value must be gcd(r, n) = 1
 
-    w = 0
-    for i in range(0, N):
+    w = (c[0] ** Y[0]) % n
+    for i in range(1, N):
         w *= (c[i] ** Y[i]) % n
 
     sb = secrets.randbelow(n)

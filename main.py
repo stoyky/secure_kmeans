@@ -39,4 +39,5 @@ if __name__ == '__main__':
     # print(timings_secure)
 
     data = gen_data(k, n_samples=1000)
+    naive_kmeans(data, centroids, k, epsilon, max_iter, True)
     secure_kmeans(data, centroids, k, epsilon, max_iter, True)

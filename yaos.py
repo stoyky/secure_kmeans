@@ -223,12 +223,3 @@ def terminate(ab, epsilon, p_bits, input_p_bits):  # Returns 1 if a+b < epsilon
     if findbiggest(ab, epsilon, p_bits, input_p_bits) == epsilon:  # Epsilon is the biggest
         return 1
     return 0
-
-if __name__ == '__main__':
-    alice = [3, 1, 2, 2, 4]
-    bob = [3, 4, 5, 2, 1]
-    N, e, d = initialize_RSA()  # Initiate RSA for oblivious transfer
-    p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
-    p_bits_rm, input_p_bits_rm = generate_p_bits_rm()  # Get the p_bits for the circuits and inputs for recompute mean
-    closest = closestcluster(alice, bob, p_bits_cc, input_p_bits_cc)  # Returns the index of the smallest sum, i.e. closest cluster
-    print(closest)

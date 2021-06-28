@@ -20,7 +20,7 @@ if __name__ == '__main__':
     max_iter = 15
 
     range_start = 1000
-    range_end = 3000
+    range_end = 50000
     step = 1000
     n_timings = 10
 
@@ -50,4 +50,7 @@ if __name__ == '__main__':
         timings_secure.append(t.timeit(number=n_timings))
     print(timings_secure)
 
+    print(timings_sklearn)
+    print(timings_naive)
+    print(timings_secure)
     graph_performance(timings_sklearn, timings_naive, timings_secure, range_start, range_end, step)

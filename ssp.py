@@ -28,12 +28,3 @@ def ssp(pubkey, prikey, n, X, Y, mult):
     sa = dot(X, Y) - sb
 
     return sa, sb
-
-if __name__ == '__main__':
-    X = [1,2,3]
-    Y = [3,4,5]
-
-    Z = [(-2)*x for x in X]
-
-    print((-2)*dot(X,Y))
-    print(dot(Z, Y))

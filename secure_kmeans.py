@@ -334,7 +334,7 @@ def plot_and_save(data, k,  centroids, closest_cluster, current_iter, secure=Fal
     colours = ["red", "blue", "green", "purple", "yellow"]
     plt.Figure()
     for i in range(k):
-        plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=1)
+        plt.scatter(centroids[i][0], centroids[i][1], color="black", sizes=[100.0], marker='X', zorder=3)
         data_point_indices = np.where(np.asarray(closest_cluster) == i)[0]
 
         for index in data_point_indices:

@@ -1,6 +1,7 @@
 from sklearn.cluster import KMeans
 from secure_kmeans import *
 from timeit import Timer
+import cProfile
 
 
 def graph_performance(sk, naive, secure, range_start, range_end, step):
@@ -14,13 +15,26 @@ def graph_performance(sk, naive, secure, range_start, range_end, step):
     plt.legend(['scikit k-means', 'naive k-means', 'secure k-means'])
     plt.show()
 
+
+def graph_calls():
+    # To generate call graph .png run:
+    # gprof2dot -f pstats performance.prof | dot -Tpng -o output.png
+
+    data = gen_data(k, n_samples=1000)
+
+    with cProfile.Profile() as pr:
+        pr.run("secure_kmeans(data, centroids, k, epsilon, max_iter, False)")
+
+    pr.dump_stats("performance.prof")
+
+
 if __name__ == '__main__':
     k = 3
     epsilon = 1
     max_iter = 15
 
     range_start = 1000
-    range_end = 50000
+    range_end = 20000
     step = 1000
     n_timings = 10
 

@@ -3,6 +3,11 @@ from random_share import *
 from ssp import *
 from yaos import *
 
+"""
+These should be run in Unittest configuration,
+and will throw errors if run as pytest tests.
+"""
+
 
 class TestRandomShare(unittest.TestCase):
     def test_reconstruction(self):

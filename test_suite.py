@@ -29,13 +29,11 @@ class TestYaos(unittest.TestCase):
     def test_yaos(self):
         alice = [3, 1, 2, 2, 4]
         bob = [3, 4, 5, 2, 1]
-        N, e, d = initialize_RSA()
         p_bits_cc, input_p_bits_cc = generate_p_bits_cc()
-        p_bits_rm, input_p_bits_rm = generate_p_bits_rm()
         p = 347
         q = 349
         n = p * q
-        closest = closestcluster(alice, bob, p_bits_cc, input_p_bits_cc,n)
+        closest = closestcluster(alice, bob, p_bits_cc, input_p_bits_cc, n)
         self.assertEqual(closest, 3)
 
 

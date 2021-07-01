@@ -1,4 +1,3 @@
-from copy import deepcopy
 import matplotlib.pyplot as plt
 from phe import paillier
 from random_share import naive_generate_share

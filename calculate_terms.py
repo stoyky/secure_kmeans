@@ -35,5 +35,3 @@ def calculate_term3(centroids, n):  # list of shares of centroids he owns for al
         summation += ((centroid ** 2) % n)
 
     return summation
-
-

@@ -1,7 +1,4 @@
-import numpy as np
 import secrets
-import phe.paillier as paillier
-import phe.util as pheu
 
 
 def dot(K, L):

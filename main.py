@@ -42,7 +42,7 @@ if __name__ == '__main__':
     max_iter = 15
 
     range_start = 1000
-    range_end = 20000
+    range_end = 32000
     step = 1000
     n_timings = 10
 

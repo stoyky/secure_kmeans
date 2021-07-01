@@ -69,7 +69,7 @@ def naive_generate_share(x, n):
     Naive sharing of a secret, inspired by Jagannathan and Wright's papers
     :param x: secret to share
     :param n: modulus
-    :return:
+    :return: tuple of share and random value that was used to share
     """
     random_value = (np.random.randint(1000) % n)
     share1 = (x - random_value) % n
@@ -83,6 +83,6 @@ def naive_reconstruct_share(x, y, n):
     :param x: share x (int)
     :param y: share y (int)
     :param n: modulus
-    :return:
+    :return: reconstructed secret (int)
     """
     return (x + y) % n

@@ -1,7 +1,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from phe import paillier
-from random_share import generate_share
+from random_share import naive_generate_share
 from ssp import ssp
 from yaos import *
 from calculate_terms import *
@@ -119,8 +119,8 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
                 alice_old_centroids = []
                 bob_old_centroids = []
                 for x, y in centroids:
-                    alice_x, bob_x = generate_share(x, n)
-                    alice_y, bob_y = generate_share(y, n)
+                    alice_x, bob_x = naive_generate_share(x, n)
+                    alice_y, bob_y = naive_generate_share(y, n)
 
                     alice_old_centroids.append((alice_x, alice_y))
                     bob_old_centroids.append((bob_x, bob_y))
@@ -191,8 +191,8 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             alices_centroid_shares = []
             bobs_centroid_shares = []
             for centroid, alice_old_centroid, bob_old_centroid in zip(centroids, alice_old_centroids, bob_old_centroids):
-                alice_x, bob_x = generate_share(centroid[0], n)
-                alice_y, bob_y = generate_share(centroid[1], n)
+                alice_x, bob_x = naive_generate_share(centroid[0], n)
+                alice_y, bob_y = naive_generate_share(centroid[1], n)
 
                 # calculate term 1 = old centroids squared.
                 # expand brackets = (ua1 ^ 2 + ub1 ^ 2 + 2ua1b1) + (ua2 ^ 2 + ub2 ^ 2 + 2ua2b2)

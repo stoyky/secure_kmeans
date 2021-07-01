@@ -5,6 +5,10 @@ import cProfile
 
 
 def graph_performance(sk, naive, secure, range_start, range_end, step):
+    """
+    Utility function to plot time as function of how many data points
+    are to be clustered
+    """
     x = [i for i in range(range_start, range_end, step)]
 
     plt.plot(x, sk)
@@ -17,8 +21,12 @@ def graph_performance(sk, naive, secure, range_start, range_end, step):
 
 
 def graph_calls():
-    # To generate call graph .png run:
-    # gprof2dot -f pstats performance.prof | dot -Tpng -o output.png
+    """
+    Utility function to create a callgraph for visualization in
+    gprof2dot or snakeviz
+    To generate call graph .png run:
+    gprof2dot -f pstats performance.prof | dot -Tpng -o output.png
+    """
 
     data = gen_data(k, n_samples=1000)
 

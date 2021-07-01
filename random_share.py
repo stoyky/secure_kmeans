@@ -2,6 +2,7 @@ import numpy as np
 import random
 from scipy.interpolate import lagrange
 
+
 def gen_poly(s, n):
     """
     Generate polynomial from s + n_0 + n_1 + ... + n-1

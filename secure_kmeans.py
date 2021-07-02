@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from phe import paillier
-from random_share import naive_generate_share
+from random_share import naive_generate_share, naive_reconstruct_share
 from ssp import ssp
 from yaos import *
 from calculate_terms import *
@@ -21,47 +21,47 @@ def create_random_data(data):
     """
     Allocates owner randomly to data.
     :param data: data to randomly allocate.
-    :return: Alice's and Bob's data ownership.
+    :return: p0's and p1's data ownership.
     """
-    alice_data = []
-    bob_data = []
+    p0_data = []
+    p1_data = []
 
     for column_idx in range(data.shape[1]):
         random_value = random.randint(0, data.shape[0])  # choose random value between 0 - 100.
 
         # randomly select indices for A of random value amount.
         possible_index = list(range(data.shape[0]))
-        alice_idx = []  # index of alice owned elements of column X.
+        p0_idx = []  # index of p0 owned elements of column X.
 
         for i in range(random_value):
             random_index = random.choice(possible_index)
             possible_index.remove(random_index)
-            alice_idx.append(random_index)
+            p0_idx.append(random_index)
 
-        alice_data.append(sorted(alice_idx))
-        bob_idx = list(set(range(data.shape[0])) - set(alice_idx))
-        bob_data.append(sorted(bob_idx))
+        p0_data.append(sorted(p0_idx))
+        p1_idx = list(set(range(data.shape[0])) - set(p0_idx))
+        p1_data.append(sorted(p1_idx))
 
-    return alice_data, bob_data
+    return p0_data, p1_data
 
 
-def idx_owner(idx, alice_data):
+def idx_owner(idx, p0_data):
     """
     Gets the owner of of data point.
     :param idx: index of data point to check.
-    :param alice_data: list of all alice's owned data points.
+    :param p0_data: list of all p0's owned data points.
     :return: owner of each feature of data.
     """
-    feature1_owner_alice = False
-    feature2_owner_alice = False
+    feature1_owner_p0 = False
+    feature2_owner_p0 = False
 
-    if idx in alice_data[0]:
-        feature1_owner_alice = True
+    if idx in p0_data[0]:
+        feature1_owner_p0 = True
 
-    if idx in alice_data[1]:
-        feature2_owner_alice = True
+    if idx in p0_data[1]:
+        feature2_owner_p0 = True
 
-    return feature1_owner_alice, feature2_owner_alice
+    return feature1_owner_p0, feature2_owner_p0
 
 
 def random_centroids(k):
@@ -97,7 +97,8 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
     :param plot:
     :return:
     """
-    alice_data, bob_data = create_random_data(data)
+
+    p0_data, p1_data = create_random_data(data)
     converged = False
     current_iter = 0
 
@@ -111,37 +112,37 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             # SECURE K-MEANS ALGORITHM
             # 1. calculate the closest centroid.
             for idx in range(data.shape[0]):  # iterates 100 times.
-                alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
-                alice_shares = []  # shares after computing the SSP (calculating the 6 terms.)
-                bob_shares = []
+                p0_owns_feature1, p0_owns_feature2 = idx_owner(idx, p0_data)
+                p0_shares = []  # shares after computing the SSP (calculating the 6 terms.)
+                p1_shares = []
 
-                alice_old_centroids = []
-                bob_old_centroids = []
+                p0_old_centroids = []
+                p1_old_centroids = []
                 for x, y in centroids:
-                    alice_x, bob_x = naive_generate_share(x, n)
-                    alice_y, bob_y = naive_generate_share(y, n)
+                    p0_x, p1_x = naive_generate_share(x, n)
+                    p0_y, p1_y = naive_generate_share(y, n)
 
-                    alice_old_centroids.append((alice_x, alice_y))
-                    bob_old_centroids.append((bob_x, bob_y))
+                    p0_old_centroids.append((p0_x, p0_y))
+                    p1_old_centroids.append((p1_x, p1_y))
 
-                    alice_term1 = calculate_alice_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
-                    bob_term1 = calculate_bob_term1(data[idx], alice_owns_feature1, alice_owns_feature2, n)
+                    p0_term1 = calculate_p0_term1(data[idx], p0_owns_feature1, p0_owns_feature2, n)
+                    p1_term1 = calculate_p1_term1(data[idx], p0_owns_feature1, p0_owns_feature2, n)
 
-                    alice_term2 = calculate_term2([alice_x, alice_y], n)  # calculate the summation of her centroid shares.
-                    bob_term3 = calculate_term3([bob_x, bob_y], n)  # calculate the summation
+                    p0_term2 = calculate_term2([p0_x, p0_y], n)  # calculate the summation of her centroid shares.
+                    p1_term3 = calculate_term3([p1_x, p1_y], n)  # calculate the summation
 
-                    alice_term4, bob_term4 = ssp(pubkey, prikey, n, [alice_x, alice_y], [bob_x, bob_y], mult=2)
-                    alice_term5, bob_term5 = ssp(pubkey, prikey, n, [alice_x, alice_y], data[idx].tolist(), mult=2)
-                    alice_term6, bob_term6 = ssp(pubkey, prikey, n, data[idx].tolist(), [bob_x, bob_y], mult=2)
+                    p0_term4, p1_term4 = ssp(pubkey, prikey, n, [p0_x, p0_y], [p1_x, p1_y], mult=2)
+                    p0_term5, p1_term5 = ssp(pubkey, prikey, n, [p0_x, p0_y], data[idx].tolist(), mult=2)
+                    p0_term6, p1_term6 = ssp(pubkey, prikey, n, data[idx].tolist(), [p1_x, p1_y], mult=2)
 
-                    alice_complete_term = (alice_term1 + alice_term2 + alice_term4 - alice_term5 - alice_term6) % n
-                    bob_complete_term = (bob_term1 + bob_term3 + bob_term4 - bob_term5 - bob_term6) % n
+                    p0_complete_term = (p0_term1 + p0_term2 + p0_term4 - p0_term5 - p0_term6) % n
+                    p1_complete_term = (p1_term1 + p1_term3 + p1_term4 - p1_term5 - p1_term6) % n
 
-                    alice_shares.append(alice_complete_term)
-                    bob_shares.append(bob_complete_term)
+                    p0_shares.append(p0_complete_term)
+                    p1_shares.append(p1_complete_term)
 
                 p_bits_cc, input_p_bits_cc = generate_p_bits_cc()  # Get the p_bits for the circuits and inputs for closest cluster
-                closest = closestcluster(alice_shares, bob_shares, p_bits_cc,
+                closest = closestcluster(p0_shares, p1_shares, p_bits_cc,
                                          input_p_bits_cc,
                                          n)  # Returns the index of the smallest sum, i.e. closest cluster
                 closest_cluster.append(closest)  # add the closest cluster for the data point.
@@ -150,101 +151,101 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             for _k in range(k):
                 data_point_indicies = np.where(np.asarray(closest_cluster) == _k)[0]
 
-                alice_sum = [0, 0]  # track of alice's summation for current cluster centroids for data point she owns. (
+                p0_sum = [0, 0]  # track of p0's summation for current cluster centroids for data point she owns. (
                 # (feature1, feature2)
-                alice_owns_count = [0, 0]  # track of number of data points she owns in current cluster centroid.
-                bob_sum = [0, 0]
-                bob_owns_count = [0, 0]
+                p0_owns_count = [0, 0]  # track of number of data points she owns in current cluster centroid.
+                p1_sum = [0, 0]
+                p1_owns_count = [0, 0]
 
                 for data_point_index in data_point_indicies:
-                    alice_owns_feature1, alice_owns_feature2 = idx_owner(data_point_index, alice_data)
+                    p0_owns_feature1, p0_owns_feature2 = idx_owner(data_point_index, p0_data)
 
-                    if alice_owns_feature1:
-                        alice_sum[0] += data[data_point_index][0]
+                    if p0_owns_feature1:
+                        p0_sum[0] += data[data_point_index][0]
                     else:
-                        bob_sum[0] += data[data_point_index][0]
+                        p1_sum[0] += data[data_point_index][0]
 
-                    if alice_owns_feature2:
-                        alice_sum[1] += data[data_point_index][1]
+                    if p0_owns_feature2:
+                        p0_sum[1] += data[data_point_index][1]
                     else:
-                        bob_sum[1] += data[data_point_index][1]
+                        p1_sum[1] += data[data_point_index][1]
 
-                    if alice_owns_feature1 and alice_owns_feature2:  # alice owns everything. # 1 1
-                        alice_owns_count = [count + 1 for count in alice_owns_count]
-                    elif (not alice_owns_feature1) and (not alice_owns_feature2):  # bob owns everything # 0 0
-                        bob_owns_count = [count + 1 for count in bob_owns_count]
-                    elif alice_owns_feature1:  # 1 0
-                        alice_owns_count[0] += 1
-                        bob_owns_count[1] += 1
+                    if p0_owns_feature1 and p0_owns_feature2:  # p0 owns everything. # 1 1
+                        p0_owns_count = [count + 1 for count in p0_owns_count]
+                    elif (not p0_owns_feature1) and (not p0_owns_feature2):  # p1 owns everything # 0 0
+                        p1_owns_count = [count + 1 for count in p1_owns_count]
+                    elif p0_owns_feature1:  # 1 0
+                        p0_owns_count[0] += 1
+                        p1_owns_count[1] += 1
                     else:  # 0 1
-                        alice_owns_count[1] += 1
-                        bob_owns_count[0] += 1
+                        p0_owns_count[1] += 1
+                        p1_owns_count[0] += 1
 
                 p_bits_rm, input_p_bits_rm = generate_p_bits_rm()
 
                 for j in range(NUM_FEATURES):
-                    centroids[_k][j] = recomputemean(alice_sum[j], bob_sum[j], alice_owns_count[j], bob_owns_count[j],
+                    centroids[_k][j] = recomputemean(p0_sum[j], p1_sum[j], p0_owns_count[j], p1_owns_count[j],
                                               p_bits_rm, input_p_bits_rm)
 
             # 3. check for termination.
-            alices_centroid_shares = []
-            bobs_centroid_shares = []
-            for centroid, alice_old_centroid, bob_old_centroid in zip(centroids, alice_old_centroids, bob_old_centroids):
-                alice_x, bob_x = naive_generate_share(centroid[0], n)
-                alice_y, bob_y = naive_generate_share(centroid[1], n)
+            p0_centroid_shares = []
+            p1_centroid_shares = []
+            for centroid, p0_old_centroid, p1_old_centroid in zip(centroids, p0_old_centroids, p1_old_centroids):
+                p0_x, p1_x = naive_generate_share(centroid[0], n)
+                p0_y, p1_y = naive_generate_share(centroid[1], n)
 
                 # calculate term 1 = old centroids squared.
                 # expand brackets = (ua1 ^ 2 + ub1 ^ 2 + 2ua1b1) + (ua2 ^ 2 + ub2 ^ 2 + 2ua2b2)
-                a_old_squared = 0
-                b_old_squared = 0
+                p0_old_squared = 0
+                p1_old_squared = 0
 
                 for i in range(NUM_FEATURES):  # iterate over all features.
-                    a_old_squared += (alice_old_centroid[i] ** 2) % n
-                    b_old_squared += (bob_old_centroid[i] ** 2) % n
-                a_share_term1, b_share_term1 = ssp(pubkey, prikey, n, list(alice_old_centroid), list(bob_old_centroid), mult=2)  # calculate 2*uab
+                    p0_old_squared += (p0_old_centroid[i] ** 2) % n
+                    p1_old_squared += (p1_old_centroid[i] ** 2) % n
+                p0_share_term1, p1_share_term1 = ssp(pubkey, prikey, n, list(p0_old_centroid), list(p1_old_centroid), mult=2)  # calculate 2*uab
 
                 # calculate term 2 = new centroids squared.
-                a_new_squared = 0
-                b_new_squared = 0
+                p0_new_squared = 0
+                p1_new_squared = 0
 
-                alice_new_centroid = (alice_x, alice_y)
-                bob_new_centroid = (bob_x, bob_y)
+                p0_new_centroid = (p0_x, p0_y)
+                p1_new_centroid = (p1_x, p1_y)
 
                 for i in range(NUM_FEATURES):  # iterate over all features.
-                    a_new_squared += (alice_new_centroid[i] ** 2) % n
-                    b_new_squared += (bob_new_centroid[i] ** 2) % n
-                a_share_term2, b_share_term2 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_new_centroid),
+                    p0_new_squared += (p0_new_centroid[i] ** 2) % n
+                    p1_new_squared += (p1_new_centroid[i] ** 2) % n
+                p0_share_term2, p1_share_term2 = ssp(pubkey, prikey, n, list(p0_new_centroid), list(p1_new_centroid),
                                                    mult=2)  # calculate 2*uab
 
                 # calculate term 3 = (new_a + new_b) (old_a + old_b) +  (new_a + new_b) (old_a + old_b)
-                a_old_new = 0  # new_a * old_a
-                b_old_new = 0  # new_b * old_b
+                p0 = 0  # new_a * old_a
+                p1_old_new = 0  # new_b * old_b
 
                 for i in range(NUM_FEATURES):
-                    a_old_new += (2 * (alice_new_centroid[i] * alice_old_centroid[i])) % n
-                    b_old_new += (2 * (bob_new_centroid[i] * bob_old_centroid[i])) % n
+                    p0 += (2 * (p0_new_centroid[i] * p0_old_centroid[i])) % n
+                    p1_old_new += (2 * (p1_new_centroid[i] * p1_old_centroid[i])) % n
 
                 # new_b * old_a
-                a_share_term3, b_share_term3 = ssp(pubkey, prikey, n,  list(bob_new_centroid), list(alice_old_centroid),
+                p0_share_term3, p1_share_term3 = ssp(pubkey, prikey, n,  list(p1_new_centroid), list(p0_old_centroid),
                                                    mult=2)  # calculate 2*uab
 
                 # new_a * old_b
-                a_share_term4, b_share_term4 = ssp(pubkey, prikey, n, list(alice_new_centroid), list(bob_old_centroid),
+                p0_share_term4, p1_share_term4 = ssp(pubkey, prikey, n, list(p0_new_centroid), list(p1_old_centroid),
                                                    mult=2)  # calculate 2*uab
-                alice_centroid_term = (a_old_squared + a_share_term1 + a_new_squared +\
-                                      a_share_term2 - a_old_new - a_share_term3 - a_share_term4) % n
-                bob_centroid_term = (b_old_squared + b_share_term1 + b_new_squared +\
-                                      b_share_term2 - b_old_new - b_share_term3 - b_share_term4) % n
+                p0_centroid_term = (p0_old_squared + p0_share_term1 + p0_new_squared +\
+                                      p0_share_term2 - p0 - p0_share_term3 - p0_share_term4) % n
+                p1_centroid_term = (p1_old_squared + p1_share_term1 + p1_new_squared +\
+                                      p1_share_term2 - p1_old_new - p1_share_term3 - p1_share_term4) % n
 
-                alices_centroid_shares.append(alice_centroid_term)
-                bobs_centroid_shares.append(bob_centroid_term)
+                p0_centroid_shares.append(p0_centroid_term)
+                p1_centroid_shares.append(p1_centroid_term)
 
             p_bits_tm = np.random.randint(0, MAX_DATA, (3, 2))  # 3 values; findbiggest(3)
             input_p_bits_tm = np.random.randint(0, MAX_DATA, (4, 2))  # 4 for findbiggest
             below_epsilon = 1
 
-            for a_share, b_share in zip(alices_centroid_shares, bobs_centroid_shares):
-                ab = (a_share + b_share) % n  # epsilon has to be a integer. 0.2 * 10 = 2.
+            for p0_share, p1_share in zip(p0_centroid_shares, p1_centroid_shares):
+                ab = naive_reconstruct_share(p0_share, p1_share, n)  # epsilon has to be a integer. 0.2 * 10 = 2.
                 # returns 0 if any is above epsilon, thus 1*0 = 0. if all is below epsilon, remains 1.
                 below_epsilon *= terminate(ab, epsilon, p_bits_tm, input_p_bits_tm)
 
@@ -258,30 +259,30 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             print("MAX ITERATIONS REACHED.")
             converged = True  # too many iterations.
 
-    # 5. Allocate cluster centers to Alice and Bob
-    alice_cluster_centers = []
-    bob_cluster_centers = []
+    # 5. Allocate cluster centers to p0 and p1
+    p0_cluster_centers = []
+    p1_cluster_centers = []
     for _k in range(k):
         data_point_indices = np.where(np.asarray(closest_cluster) == _k)[0]
 
         for idx in data_point_indices:
-            alice_owns_feature1, alice_owns_feature2 = idx_owner(idx, alice_data)
-            if alice_owns_feature1 and alice_owns_feature2:  # alice owns all features
-                alice_cluster_centers.append(tuple(centroids[_k]))
-                # bob owns all features.
-            elif not(alice_owns_feature1) and not(alice_owns_feature2):
-                bob_cluster_centers.append(tuple(centroids[_k]))
+            p0_owns_f1, p0_owns_f2 = idx_owner(idx, p0_data)
+            if p0_owns_feature1 and p0_owns_feature2:  # p0 owns all features
+                p0_cluster_centers.append(tuple(centroids[_k]))
+                # p1 owns all features.
+            elif not(p0_owns_f1) and not(p0_owns_f2):
+                p1_cluster_centers.append(tuple(centroids[_k]))
                 # they share features
             else:
-                alice_cluster_centers.append(tuple(centroids[_k]))
-                bob_cluster_centers.append(tuple(centroids[_k]))
+                p0_cluster_centers.append(tuple(centroids[_k]))
+                p1_cluster_centers.append(tuple(centroids[_k]))
 
-    # PRINT IF ALICE AND BOB WANTS TO KNOW THEIR CLUSTER CENTERS.
-    # alice_cluster_centers = set(alice_cluster_centers)
-    # bob_cluster_centers = set(bob_cluster_centers)
+    # PRINT IF p0 AND p1 WANTS TO KNOW THEIR CLUSTER CENTERS.
+    # p0_cluster_centers = set(p0_cluster_centers)
+    # p1_cluster_centers = set(p1_cluster_centers)
     #
-    # print("Alice's cluster centers are: {0}".format(alice_cluster_centers))
-    # print("Bob's cluster centers are: {0}".format(bob_cluster_centers))
+    # print("p0's cluster centers are: {0}".format(p0_cluster_centers))
+    # print("p1's cluster centers are: {0}".format(p1_cluster_centers))
     print("done")
 
 

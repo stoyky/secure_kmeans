@@ -1,21 +1,21 @@
-def calculate_alice_term1(data, alice_owns_feature1, alice_owns_feature2, n):
-    if alice_owns_feature1 and alice_owns_feature2:
+def calculate_p0_term1(data, p0_owns_feature1, p0_owns_feature2, n):
+    if p0_owns_feature1 and p0_owns_feature2:
         return (data[0] ** 2 + data[1] ** 2) % n
 
-    elif alice_owns_feature1:
+    elif p0_owns_feature1:
         return (data[0] ** 2) % n
-    elif alice_owns_feature2:
+    elif p0_owns_feature2:
         return (data[1] ** 2) % n
     else:
         return 0
 
 
-def calculate_bob_term1(data, alice_owns_feature1, alice_owns_feature2, n):
-    if not alice_owns_feature1 and not alice_owns_feature2:
+def calculate_p1_term1(data, p0_owns_feature1, p0_owns_feature2, n):
+    if not p0_owns_feature1 and not p0_owns_feature2:
         return (data[0] ** 2 + data[1] ** 2) % n
-    elif not alice_owns_feature1:
+    elif not p0_owns_feature1:
         return (data[0] ** 2) % n
-    elif not alice_owns_feature2:
+    elif not p0_owns_feature2:
         return (data[1] ** 2) % n
     else:
         return 0

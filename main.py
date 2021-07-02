@@ -51,32 +51,33 @@ if __name__ == '__main__':
     n_timings = 3
 
     centroids = random_centroids(k)
-
-    timings_sklearn = []
-    for i in range(range_start, range_end, step):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        t = Timer(lambda: KMeans(n_clusters=k, max_iter=max_iter).fit(data))
-        timings_sklearn.append(t.timeit(number=n_timings))
-        print(timings_sklearn)
-
-    timings_naive = []
-    for i in range(range_start, range_end, step):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        t = Timer(lambda: naive_kmeans(data, centroids, k, epsilon, max_iter, False))
-        timings_naive.append(t.timeit(number=n_timings))
-        print(timings_naive)
-
-    timings_secure = []
-    for i in range(range_start, range_end, step):
-        print(i)
-        data = gen_data(k, n_samples=i)
-        t = Timer(lambda: secure_kmeans(data, centroids, k, epsilon, max_iter, False))
-        timings_secure.append(t.timeit(number=n_timings))
-        print(timings_secure)
-
-    print(timings_sklearn)
-    print(timings_naive)
-    print(timings_secure)
-    graph_performance(timings_sklearn, timings_naive, timings_secure, range_start, range_end, step)
+    data = gen_data(k, n_samples=300)
+    secure_kmeans(data, centroids, k, epsilon, max_iter, True)
+    # timings_sklearn = []
+    # for i in range(range_start, range_end, step):
+    #     print(i)
+    #     data = gen_data(k, n_samples=i)
+    #     t = Timer(lambda: KMeans(n_clusters=k, max_iter=max_iter).fit(data))
+    #     timings_sklearn.append(t.timeit(number=n_timings))
+    #     print(timings_sklearn)
+    #
+    # timings_naive = []
+    # for i in range(range_start, range_end, step):
+    #     print(i)
+    #     data = gen_data(k, n_samples=i)
+    #     t = Timer(lambda: naive_kmeans(data, centroids, k, epsilon, max_iter, False))
+    #     timings_naive.append(t.timeit(number=n_timings))
+    #     print(timings_naive)
+    #
+    # timings_secure = []
+    # for i in range(range_start, range_end, step):
+    #     print(i)
+    #     data = gen_data(k, n_samples=i)
+    #     t = Timer(lambda: secure_kmeans(data, centroids, k, epsilon, max_iter, False))
+    #     timings_secure.append(t.timeit(number=n_timings))
+    #     print(timings_secure)
+    #
+    # print(timings_sklearn)
+    # print(timings_naive)
+    # print(timings_secure)
+    # graph_performance(timings_sklearn, timings_naive, timings_secure, range_start, range_end, step)

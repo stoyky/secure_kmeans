@@ -273,7 +273,7 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
             if p0_owns_feature1 and p0_owns_feature2:  # p0 owns all features
                 p0_cluster_centers.append(tuple(centroids[_k]))
                 # p1 owns all features.
-            elif not(p0_owns_f1) and not(p0_owns_f2):
+            elif not(p0_owns_feature1) and not(p0_owns_feature2):
                 p1_cluster_centers.append(tuple(centroids[_k]))
                 # they share features
             else:

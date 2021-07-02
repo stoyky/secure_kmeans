@@ -89,6 +89,9 @@ def secure_kmeans(data, centroids, k, epsilon, max_iter, plot=False):
     """
     Perform secure kmeans as defined by Jagannathan and Wright.
     https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.387.826&rep=rep1&type=pdf
+
+    We refer to the involved parties as p0, p1, ... , pn
+
     :param data: data to perform secure kmeans on.
     :param centroids: centroids to use.
     :param k: number of centroids.
